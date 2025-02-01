@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 
 export interface Student {
   id: string;
+  user_id: string;
   name: string;
   age: number;
   current_surah: string;
@@ -19,13 +20,28 @@ export const useStudentOperations = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const addStudent = async (studentData: Omit<Student, 'id' | 'created_at' | 'updated_at'>) => {
+  // Function untuk dapatkan current user
+  const getCurrentUser = async () => {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    if (!user) throw new Error('Sila log masuk semula');
+    return user;
+  };
+
+  const addStudent = async (studentData: Omit<Student, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     setIsLoading(true);
     setError(null);
     try {
+      // Dapatkan current user
+      const user = await getCurrentUser();
+
+      // Insert student dengan user_id
       const { data, error } = await supabase
         .from('students')
-        .insert([studentData])
+        .insert([{
+          ...studentData,
+          user_id: user.id
+        }])
         .select()
         .single();
 
@@ -44,10 +60,15 @@ export const useStudentOperations = () => {
     setIsLoading(true);
     setError(null);
     try {
+      // Dapatkan current user
+      const user = await getCurrentUser();
+
+      // Update student yang dimiliki oleh user sahaja
       const { data, error } = await supabase
         .from('students')
         .update(updates)
         .eq('id', id)
+        .eq('user_id', user.id) // Pastikan student ni kepunyaan user ni
         .select()
         .single();
 
@@ -66,10 +87,15 @@ export const useStudentOperations = () => {
     setIsLoading(true);
     setError(null);
     try {
+      // Dapatkan current user
+      const user = await getCurrentUser();
+
+      // Delete student yang dimiliki oleh user sahaja
       const { error } = await supabase
         .from('students')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id); // Pastikan student ni kepunyaan user ni
 
       if (error) throw error;
     } catch (err) {
@@ -85,9 +111,14 @@ export const useStudentOperations = () => {
     setIsLoading(true);
     setError(null);
     try {
+      // Dapatkan current user
+      const user = await getCurrentUser();
+
+      // Get students yang dimiliki oleh user sahaja
       const { data, error } = await supabase
         .from('students')
         .select('*')
+        .eq('user_id', user.id) // Filter by user_id
         .order('created_at', { ascending: false });
 
       if (error) throw error;
