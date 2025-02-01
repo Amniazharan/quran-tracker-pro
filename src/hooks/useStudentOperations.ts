@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export interface Student {
@@ -20,22 +20,19 @@ export const useStudentOperations = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Function untuk dapatkan current user
-  const getCurrentUser = async () => {
+  // Cache current user
+  const getCurrentUser = useCallback(async () => {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) throw error;
     if (!user) throw new Error('Sila log masuk semula');
     return user;
-  };
+  }, []);
 
-  const addStudent = async (studentData: Omit<Student, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-    setIsLoading(true);
-    setError(null);
+  const addStudent = useCallback(async (studentData: Omit<Student, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     try {
-      // Dapatkan current user
+      setIsLoading(true);
       const user = await getCurrentUser();
 
-      // Insert student dengan user_id
       const { data, error } = await supabase
         .from('students')
         .insert([{
@@ -54,21 +51,40 @@ export const useStudentOperations = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [getCurrentUser]);
 
-  const updateStudent = async (id: string, updates: Partial<Student>) => {
-    setIsLoading(true);
-    setError(null);
+  const getStudents = useCallback(async () => {
     try {
-      // Dapatkan current user
+      setIsLoading(true);
       const user = await getCurrentUser();
 
-      // Update student yang dimiliki oleh user sahaja
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getCurrentUser]);
+
+  const updateStudent = useCallback(async (id: string, updates: Partial<Student>) => {
+    try {
+      setIsLoading(true);
+      const user = await getCurrentUser();
+
       const { data, error } = await supabase
         .from('students')
         .update(updates)
         .eq('id', id)
-        .eq('user_id', user.id) // Pastikan student ni kepunyaan user ni
+        .eq('user_id', user.id)
         .select()
         .single();
 
@@ -81,21 +97,18 @@ export const useStudentOperations = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [getCurrentUser]);
 
-  const deleteStudent = async (id: string) => {
-    setIsLoading(true);
-    setError(null);
+  const deleteStudent = useCallback(async (id: string) => {
     try {
-      // Dapatkan current user
+      setIsLoading(true);
       const user = await getCurrentUser();
 
-      // Delete student yang dimiliki oleh user sahaja
       const { error } = await supabase
         .from('students')
         .delete()
         .eq('id', id)
-        .eq('user_id', user.id); // Pastikan student ni kepunyaan user ni
+        .eq('user_id', user.id);
 
       if (error) throw error;
     } catch (err) {
@@ -105,32 +118,7 @@ export const useStudentOperations = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const getStudents = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Dapatkan current user
-      const user = await getCurrentUser();
-
-      // Get students yang dimiliki oleh user sahaja
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('user_id', user.id) // Filter by user_id
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      const error = err as Error;
-      setError(error.message);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [getCurrentUser]);
 
   return {
     isLoading,

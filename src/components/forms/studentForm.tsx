@@ -1,16 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useStudentOperations, Student } from '@/hooks/useStudentOperations';
+import { useStudentOperations } from '@/hooks/useStudentOperations';
 
 interface StudentFormProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'add' | 'edit';
-  initialData?: Student;
+  initialData?: {
+    id?: string;
+    name: string;
+    age: number;
+    current_surah: string;
+    current_ayat: number;
+    class_time: string;
+    location: string;
+    payment_status: boolean;
+    performance: "Perlu Latihan" | "Lancar";
+  };
   onSuccess?: () => void;
 }
 
@@ -22,10 +32,10 @@ const defaultStudent = {
   class_time: '',
   location: '',
   payment_status: false,
-  performance: 'Perlu Latihan' as "Perlu Latihan" | "Lancar"
+  performance: 'Perlu Latihan' as const
 };
 
-export function StudentForm({
+export const StudentForm = React.memo(function StudentForm({
   isOpen,
   onClose,
   mode,
@@ -35,28 +45,40 @@ export function StudentForm({
   const [formData, setFormData] = useState(initialData || defaultStudent);
   const { addStudent, updateStudent, isLoading } = useStudentOperations();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
+      const studentData = {
+        ...formData,
+        age: Number(formData.age),
+        current_ayat: Number(formData.current_ayat),
+        payment_status: Boolean(formData.payment_status)
+      };
+
       if (mode === 'add') {
-        await addStudent(formData);
+        await addStudent(studentData);
         toast.success("Pelajar berjaya ditambah!");
-      } else {
-        if (initialData?.id) {
-          await updateStudent(initialData.id, formData);
-          toast.success("Pelajar berjaya dikemaskini!");
-        }
+      } else if (initialData?.id) {
+        await updateStudent(initialData.id, studentData);
+        toast.success("Pelajar berjaya dikemaskini!");
       }
 
       onSuccess?.();
       onClose();
       setFormData(defaultStudent);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Ralat berlaku semasa menyimpan data";
-      toast.error(errorMessage);
+    } catch (error) {
+      console.error('Form submission error:', error);
+      toast.error(error instanceof Error ? error.message : "Ralat berlaku semasa menyimpan data");
     }
-  };
+  }, [formData, mode, initialData, addStudent, updateStudent, onSuccess, onClose]);
+
+  const handleInputChange = useCallback((field: string, value: string | number | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }, []);
 
   return (
     <Dialog 
@@ -69,7 +91,7 @@ export function StudentForm({
           <Label>Nama Pelajar</Label>
           <Input
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={(e) => handleInputChange('name', e.target.value)}
             placeholder="Nama penuh pelajar"
             required
           />
@@ -80,9 +102,10 @@ export function StudentForm({
           <Input
             type="number"
             value={formData.age || ''}
-            onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) })}
+            onChange={(e) => handleInputChange('age', parseInt(e.target.value))}
             placeholder="Umur pelajar"
             required
+            min="1"
           />
         </div>
 
@@ -91,7 +114,7 @@ export function StudentForm({
             <Label>Surah</Label>
             <Input
               value={formData.current_surah}
-              onChange={(e) => setFormData({ ...formData, current_surah: e.target.value })}
+              onChange={(e) => handleInputChange('current_surah', e.target.value)}
               placeholder="Contoh: Al-Fatihah"
               required
             />
@@ -101,9 +124,10 @@ export function StudentForm({
             <Input
               type="number"
               value={formData.current_ayat || ''}
-              onChange={(e) => setFormData({ ...formData, current_ayat: parseInt(e.target.value) })}
+              onChange={(e) => handleInputChange('current_ayat', parseInt(e.target.value))}
               placeholder="No. ayat"
               required
+              min="1"
             />
           </div>
         </div>
@@ -113,7 +137,7 @@ export function StudentForm({
           <Input
             type="time"
             value={formData.class_time}
-            onChange={(e) => setFormData({ ...formData, class_time: e.target.value })}
+            onChange={(e) => handleInputChange('class_time', e.target.value)}
             required
           />
         </div>
@@ -122,7 +146,7 @@ export function StudentForm({
           <Label>Lokasi</Label>
           <Input
             value={formData.location}
-            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+            onChange={(e) => handleInputChange('location', e.target.value)}
             placeholder="Contoh: Surau Al-Hidayah"
             required
           />
@@ -132,7 +156,7 @@ export function StudentForm({
           <Label>Status Bayaran</Label>
           <select
             value={formData.payment_status ? 'true' : 'false'}
-            onChange={(e) => setFormData({ ...formData, payment_status: e.target.value === 'true' })}
+            onChange={(e) => handleInputChange('payment_status', e.target.value === 'true')}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
             required
           >
@@ -145,7 +169,7 @@ export function StudentForm({
           <Label>Prestasi</Label>
           <select
             value={formData.performance}
-            onChange={(e) => setFormData({ ...formData, performance: e.target.value as "Lancar" | "Perlu Latihan" })}
+            onChange={(e) => handleInputChange('performance', e.target.value as "Lancar" | "Perlu Latihan")}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
             required
           >
@@ -177,4 +201,4 @@ export function StudentForm({
       </form>
     </Dialog>
   );
-}
+});
