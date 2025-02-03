@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,15 @@ export const StudentForm = React.memo(function StudentForm({
   const [formData, setFormData] = useState(initialData || defaultStudent);
   const { addStudent, updateStudent, isLoading } = useStudentOperations();
 
+  // Add this useEffect to update formData when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    } else {
+      setFormData(defaultStudent);
+    }
+  }, [initialData, isOpen]); // Also trigger on isOpen changes
+
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -66,7 +75,6 @@ export const StudentForm = React.memo(function StudentForm({
 
       onSuccess?.();
       onClose();
-      setFormData(defaultStudent);
     } catch (error) {
       console.error('Form submission error:', error);
       toast.error(error instanceof Error ? error.message : "Ralat berlaku semasa menyimpan data");

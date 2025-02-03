@@ -10,12 +10,15 @@ import { useStudentOperations, Student } from '@/hooks/useStudentOperations';
 import { toast } from "sonner";
 
 export default function DashboardPage() {
-  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  // State untuk form
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  
   const [students, setStudents] = useState<Student[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const { getStudents, deleteStudent } = useStudentOperations();
 
-  // Convert fetchStudents to useCallback
   const fetchStudents = useCallback(async () => {
     try {
       const data = await getStudents();
@@ -29,15 +32,28 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchStudents();
-  }, [fetchStudents]); // Now fetchStudents is properly listed as a dependency
+  }, [fetchStudents]);
 
-  // Add delete handler
+  // Handler untuk buka form edit
+  const handleEdit = (student: Student) => {
+    setSelectedStudent(student);
+    setFormMode('edit');
+    setIsFormOpen(true);
+  };
+
+  // Handler untuk buka form tambah
+  const handleAdd = () => {
+    setSelectedStudent(null);
+    setFormMode('add');
+    setIsFormOpen(true);
+  };
+
   const handleDelete = async (id: string) => {
     if (window.confirm('Adakah anda pasti untuk memadam pelajar ini?')) {
       try {
         await deleteStudent(id);
         toast.success('Pelajar berjaya dipadam');
-        fetchStudents(); // Refresh the list
+        fetchStudents();
       } catch (error) {
         if (error instanceof Error) {
           toast.error(`Gagal memadam pelajar: ${error.message}`);
@@ -46,7 +62,13 @@ export default function DashboardPage() {
     }
   };
 
-  // Filter students based on search query
+  // Handler untuk tutup form
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setSelectedStudent(null);
+    setFormMode('add');
+  };
+
   const filteredStudents = students.filter(student => 
     student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.location.toLowerCase().includes(searchQuery.toLowerCase())
@@ -59,7 +81,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-emerald-800">Dashboard Guru</h1>
         <Button 
           className="bg-emerald-600 hover:bg-emerald-700"
-          onClick={() => setIsAddStudentOpen(true)}
+          onClick={handleAdd}
         >
           <Plus className="h-4 w-4 mr-2" /> Tambah Pelajar
         </Button>
@@ -125,7 +147,7 @@ export default function DashboardPage() {
                   <div className="flex gap-2">
                     <button 
                       className="text-emerald-600 hover:text-emerald-800 transition-colors"
-                      onClick={() => {/* Handle edit */}}
+                      onClick={() => handleEdit(student)}
                     >
                       <Edit2 className="h-4 w-4" />
                     </button>
@@ -186,9 +208,10 @@ export default function DashboardPage() {
 
       {/* Student Form Modal */}
       <StudentForm 
-        isOpen={isAddStudentOpen}
-        onClose={() => setIsAddStudentOpen(false)}
-        mode="add"
+        isOpen={isFormOpen}
+        onClose={handleCloseForm}
+        mode={formMode}
+        initialData={selectedStudent || undefined}
         onSuccess={fetchStudents}
       />
     </div>

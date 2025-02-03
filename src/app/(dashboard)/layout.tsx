@@ -36,7 +36,7 @@ export default function DashboardLayout({
       <footer className="border-t">
         <div className="container flex h-14 items-center">
           <p className="text-sm text-muted-foreground">
-            Built with ♥ by QuranTracker Pro Team
+            Built with ♥ by Amni Azharan
           </p>
         </div>
       </footer>

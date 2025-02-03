@@ -1,10 +1,10 @@
 "use client"
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 
@@ -51,14 +51,8 @@ export function MobileSidebar() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="pr-0">
-        <Link
-          href="/dashboard"
-          className="flex items-center space-x-2"
-          onClick={() => setOpen(false)}
-        >
-          <span className="font-bold">QuranTracker Pro</span>
-        </Link>
-        <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">
+        <SheetTitle className="font-bold">QuranTracker Pro</SheetTitle>
+        <div className="my-4 h-[calc(100vh-8rem)] pb-10">
           <div className="flex flex-col space-y-3">
             {items.map((item) => (
               <Link
