@@ -18,7 +18,6 @@ interface StudentFormProps {
     current_ayat: number;
     class_time: string;
     location: string;
-    payment_status: boolean;
     performance: "Perlu Latihan" | "Lancar";
   };
   onSuccess?: () => void;
@@ -31,7 +30,6 @@ const defaultStudent = {
   current_ayat: 0,
   class_time: '',
   location: '',
-  payment_status: false,
   performance: 'Perlu Latihan' as const
 };
 
@@ -45,14 +43,13 @@ export const StudentForm = React.memo(function StudentForm({
   const [formData, setFormData] = useState(initialData || defaultStudent);
   const { addStudent, updateStudent, isLoading } = useStudentOperations();
 
-  // Add this useEffect to update formData when initialData changes
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
     } else {
       setFormData(defaultStudent);
     }
-  }, [initialData, isOpen]); // Also trigger on isOpen changes
+  }, [initialData, isOpen]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,8 +58,7 @@ export const StudentForm = React.memo(function StudentForm({
       const studentData = {
         ...formData,
         age: Number(formData.age),
-        current_ayat: Number(formData.current_ayat),
-        payment_status: Boolean(formData.payment_status)
+        current_ayat: Number(formData.current_ayat)
       };
 
       if (mode === 'add') {
@@ -158,19 +154,6 @@ export const StudentForm = React.memo(function StudentForm({
             placeholder="Contoh: Surau Al-Hidayah"
             required
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Status Bayaran</Label>
-          <select
-            value={formData.payment_status ? 'true' : 'false'}
-            onChange={(e) => handleInputChange('payment_status', e.target.value === 'true')}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-            required
-          >
-            <option value="true">Sudah Bayar</option>
-            <option value="false">Belum Bayar</option>
-          </select>
         </div>
 
         <div className="space-y-2">

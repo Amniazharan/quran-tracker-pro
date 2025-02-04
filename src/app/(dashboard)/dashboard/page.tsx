@@ -4,38 +4,49 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Calendar, Banknote } from 'lucide-react';
 import { StudentForm } from '@/components/forms/studentForm';
 import { useStudentOperations, Student } from '@/hooks/useStudentOperations';
 import { toast } from "sonner";
+
+interface StudentWithPayment extends Student {
+  payment_status: 'Paid' | 'Pending' | 'Overdue';
+  last_payment_date?: string;
+  last_payment_amount?: number;
+  payments?: Array<{
+    status: 'Paid' | 'Pending' | 'Overdue';
+    payment_date: string;
+    amount: number;
+  }>;
+}
 
 export default function DashboardPage() {
   // State untuk form
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<StudentWithPayment | null>(null);
   
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<StudentWithPayment[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const { getStudents, deleteStudent } = useStudentOperations();
+  const { getStudentsWithPayments, deleteStudent } = useStudentOperations();
 
   const fetchStudents = useCallback(async () => {
     try {
-      const data = await getStudents();
+      const data = await getStudentsWithPayments();
       setStudents(data || []);
     } catch (error) {
       if (error instanceof Error) {
         toast.error(`Gagal mendapatkan senarai pelajar: ${error.message}`);
       }
     }
-  }, [getStudents]);
+  }, [getStudentsWithPayments]);
 
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
 
   // Handler untuk buka form edit
-  const handleEdit = (student: Student) => {
+  const handleEdit = (student: StudentWithPayment) => {
     setSelectedStudent(student);
     setFormMode('edit');
     setIsFormOpen(true);
@@ -69,10 +80,41 @@ export default function DashboardPage() {
     setFormMode('add');
   };
 
+  // Calculate stats
+  const stats = {
+    paidCount: students.filter(s => s.payment_status === 'Paid').length,
+    pendingCount: students.filter(s => s.payment_status === 'Pending').length,
+    overdueCount: students.filter(s => s.payment_status === 'Overdue').length,
+    performanceCount: students.filter(s => s.performance === 'Lancar').length
+  };
+
   const filteredStudents = students.filter(student => 
     student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.location.toLowerCase().includes(searchQuery.toLowerCase())
+    student.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    student.current_surah.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Paid':
+        return 'bg-green-100 text-green-800';
+      case 'Pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Overdue':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString('ms-MY', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
 
   return (
     <div className="space-y-4 p-4 md:p-8">
@@ -88,7 +130,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg text-emerald-700">Jumlah Pelajar</CardTitle>
@@ -100,11 +142,20 @@ export default function DashboardPage() {
         
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg text-emerald-700">Belum Bayar</CardTitle>
+            <CardTitle className="text-lg text-emerald-700">Sudah Bayar</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-green-600">{stats.paidCount}</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg text-emerald-700">Belum/Tertunggak</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-red-500">
-              {filteredStudents.filter(s => !s.payment_status).length}
+              {stats.pendingCount + stats.overdueCount}
             </p>
           </CardContent>
         </Card>
@@ -114,9 +165,7 @@ export default function DashboardPage() {
             <CardTitle className="text-lg text-emerald-700">Prestasi Cemerlang</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-emerald-500">
-              {filteredStudents.filter(s => s.performance === 'Lancar').length}
-            </p>
+            <p className="text-3xl font-bold text-emerald-500">{stats.performanceCount}</p>
           </CardContent>
         </Card>
       </div>
@@ -178,17 +227,39 @@ export default function DashboardPage() {
                     <span className="text-sm text-gray-500">Lokasi:</span>
                     <span className="text-sm font-medium">{student.location}</span>
                   </div>
+
+                  {student.last_payment_date && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">
+                        <Calendar className="h-3 w-3 inline mr-1" />
+                        Bayaran Terakhir:
+                      </span>
+                      <span className="text-sm font-medium">
+                        {formatDate(student.last_payment_date)}
+                      </span>
+                    </div>
+                  )}
+
+                  {student.last_payment_amount && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">
+                        <Banknote className="h-3 w-3 inline mr-1" />
+                        Jumlah:
+                      </span>
+                      <span className="text-sm font-medium">
+                        RM {student.last_payment_amount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Status Badges */}
                 <div className="flex flex-wrap gap-2">
                   <span 
-                    className={`px-2 py-1 rounded-full text-xs
-                      ${student.payment_status 
-                        ? "bg-green-100 text-green-800" 
-                        : "bg-red-100 text-red-800"}`}
+                    className={`px-2 py-1 rounded-full text-xs ${getStatusColor(student.payment_status)}`}
                   >
-                    {student.payment_status ? "Sudah Bayar" : "Belum Bayar"}
+                    {student.payment_status === 'Paid' ? 'Sudah Bayar' : 
+                     student.payment_status === 'Pending' ? 'Belum Bayar' : 'Tertunggak'}
                   </span>
                   
                   <span 
@@ -204,6 +275,12 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         ))}
+
+        {filteredStudents.length === 0 && (
+          <div className="col-span-full text-center py-8 text-gray-500">
+            Tiada pelajar ditemui
+          </div>
+        )}
       </div>
 
       {/* Student Form Modal */}
