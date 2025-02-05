@@ -51,19 +51,19 @@ export function MobileSidebar() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="pr-0">
-        <SheetTitle className="font-bold">QuranTracker Pro</SheetTitle>
-        <div className="my-4 h-[calc(100vh-8rem)] pb-10">
-          <div className="flex flex-col space-y-3">
+        <SheetTitle className="text-xl font-bold mb-6">QuranTracker Pro</SheetTitle>
+        <div className="my-4 pb-10">
+          <div className="flex flex-col space-y-4">
             {items.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "text-sm font-medium transition-colors hover:text-primary",
+                  "text-base font-medium transition-colors hover:text-primary",
                   pathname === item.href
-                    ? "text-foreground"
-                    : "text-muted-foreground"
+                    ? "text-emerald-600"
+                    : "text-gray-600"
                 )}
               >
                 {item.title}

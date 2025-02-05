@@ -28,18 +28,18 @@ export default function DashboardPage() {
   
   const [students, setStudents] = useState<StudentWithPayment[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const { getStudentsWithPayments, deleteStudent } = useStudentOperations();
+  const { getStudents, deleteStudent } = useStudentOperations();
 
   const fetchStudents = useCallback(async () => {
     try {
-      const data = await getStudentsWithPayments();
+      const data = await getStudents();
       setStudents(data || []);
     } catch (error) {
       if (error instanceof Error) {
         toast.error(`Gagal mendapatkan senarai pelajar: ${error.message}`);
       }
     }
-  }, [getStudentsWithPayments]);
+  }, [getStudents]);
 
   useEffect(() => {
     fetchStudents();

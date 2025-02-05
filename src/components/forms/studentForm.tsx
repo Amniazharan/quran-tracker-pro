@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,18 +30,19 @@ const defaultStudent = {
   current_ayat: 0,
   class_time: '',
   location: '',
-  performance: 'Perlu Latihan' as const
+  performance: 'Perlu Latihan' as "Perlu Latihan" | "Lancar"
 };
 
-export const StudentForm = React.memo(function StudentForm({
+export function StudentForm({
   isOpen,
   onClose,
   mode,
   initialData,
   onSuccess
 }: StudentFormProps) {
-  const [formData, setFormData] = useState(initialData || defaultStudent);
-  const { addStudent, updateStudent, isLoading } = useStudentOperations();
+  const [formData, setFormData] = useState(defaultStudent);
+  const { addStudent, updateStudent } = useStudentOperations();
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -51,8 +52,9 @@ export const StudentForm = React.memo(function StudentForm({
     }
   }, [initialData, isOpen]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setIsLoading(true);
 
     try {
       const studentData = {
@@ -72,17 +74,19 @@ export const StudentForm = React.memo(function StudentForm({
       onSuccess?.();
       onClose();
     } catch (error) {
-      console.error('Form submission error:', error);
-      toast.error(error instanceof Error ? error.message : "Ralat berlaku semasa menyimpan data");
+      console.error('Form error:', error);
+      toast.error(error instanceof Error ? error.message : "Ralat berlaku");
+    } finally {
+      setIsLoading(false);
     }
-  }, [formData, mode, initialData, addStudent, updateStudent, onSuccess, onClose]);
+  }
 
-  const handleInputChange = useCallback((field: string, value: string | number | boolean) => {
+  function handleChange(field: keyof typeof formData, value: string | number) {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
-  }, []);
+  }
 
   return (
     <Dialog 
@@ -95,7 +99,7 @@ export const StudentForm = React.memo(function StudentForm({
           <Label>Nama Pelajar</Label>
           <Input
             value={formData.name}
-            onChange={(e) => handleInputChange('name', e.target.value)}
+            onChange={(e) => handleChange('name', e.target.value)}
             placeholder="Nama penuh pelajar"
             required
           />
@@ -106,7 +110,7 @@ export const StudentForm = React.memo(function StudentForm({
           <Input
             type="number"
             value={formData.age || ''}
-            onChange={(e) => handleInputChange('age', parseInt(e.target.value))}
+            onChange={(e) => handleChange('age', e.target.value)}
             placeholder="Umur pelajar"
             required
             min="1"
@@ -118,7 +122,7 @@ export const StudentForm = React.memo(function StudentForm({
             <Label>Surah</Label>
             <Input
               value={formData.current_surah}
-              onChange={(e) => handleInputChange('current_surah', e.target.value)}
+              onChange={(e) => handleChange('current_surah', e.target.value)}
               placeholder="Contoh: Al-Fatihah"
               required
             />
@@ -128,7 +132,7 @@ export const StudentForm = React.memo(function StudentForm({
             <Input
               type="number"
               value={formData.current_ayat || ''}
-              onChange={(e) => handleInputChange('current_ayat', parseInt(e.target.value))}
+              onChange={(e) => handleChange('current_ayat', e.target.value)}
               placeholder="No. ayat"
               required
               min="1"
@@ -141,7 +145,7 @@ export const StudentForm = React.memo(function StudentForm({
           <Input
             type="time"
             value={formData.class_time}
-            onChange={(e) => handleInputChange('class_time', e.target.value)}
+            onChange={(e) => handleChange('class_time', e.target.value)}
             required
           />
         </div>
@@ -150,7 +154,7 @@ export const StudentForm = React.memo(function StudentForm({
           <Label>Lokasi</Label>
           <Input
             value={formData.location}
-            onChange={(e) => handleInputChange('location', e.target.value)}
+            onChange={(e) => handleChange('location', e.target.value)}
             placeholder="Contoh: Surau Al-Hidayah"
             required
           />
@@ -160,7 +164,7 @@ export const StudentForm = React.memo(function StudentForm({
           <Label>Prestasi</Label>
           <select
             value={formData.performance}
-            onChange={(e) => handleInputChange('performance', e.target.value as "Lancar" | "Perlu Latihan")}
+            onChange={(e) => handleChange('performance', e.target.value as "Lancar" | "Perlu Latihan")}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
             required
           >
@@ -192,4 +196,4 @@ export const StudentForm = React.memo(function StudentForm({
       </form>
     </Dialog>
   );
-});
+}
